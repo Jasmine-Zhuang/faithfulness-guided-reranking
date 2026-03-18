@@ -6,6 +6,7 @@ Faithfulness-guided reranking for abstractive summarization using transformer mo
 This repository now includes the initial experiment pipeline for:
 - Week 1 (Mar 3-7): setup + dataset loading + BART top-1 and n-best generation (`k=5`)
 - Week 2 (Mar 10-14): baseline scoring with ROUGE and two faithfulness metrics
+- Week 3 (Mar 17-21): reranking with single-metric and agreement-gated selection
 
 ### 1) Install dependencies
 
@@ -59,6 +60,60 @@ Output:
 - `outputs/<dataset>/baseline_<split>_k5/summary_metrics.json`
 - `outputs/<dataset>/baseline_<split>_k5/per_example_faithfulness.jsonl`
 
+### 4) Run Week 3 reranking on the k-best list
+
+CNN/DailyMail example:
+
+```bash
+PYTHONPATH=src python3 scripts/run_week3_reranking.py \
+  --input outputs/cnn_dailymail/validation_k5_candidates.jsonl
+```
+
+XSum example:
+
+```bash
+PYTHONPATH=src python3 scripts/run_week3_reranking.py \
+  --input outputs/xsum/validation_k5_candidates.jsonl
+```
+
+This computes candidate-level faithfulness scores for each n-best list and compares:
+- `top1`
+- `single_metric_nli`
+- `single_metric_keyword`
+- `weighted_sum` (equal-weight z-score normalization by default)
+- `agreement_gated` (requires both faithfulness metrics to pick the same best candidate; otherwise falls back to weighted sum)
+
+Optional flags:
+- `--fallback-strategy top1` to fall back to the original top-1 instead of `weighted_sum`
+- `--weight-nli` and `--weight-keyword` to change weighted-sum reranking weights
+
+Output:
+- `outputs/<dataset>/week3_<split>_k5/reranked_examples.jsonl`
+- `outputs/<dataset>/week3_<split>_k5/strategy_metrics.json`
+- `outputs/<dataset>/week3_<split>_k5/run_config.json`
+
+### 5) Evaluate top-1 with SummaC or FactCC
+
+SummaC example:
+
+```bash
+PYTHONPATH=src python3 scripts/run_week2_summac_eval.py \
+  --input outputs/cnn_dailymail/validation_k5_candidates.jsonl
+```
+
+FactCC example:
+
+```bash
+PYTHONPATH=src python3 scripts/run_week2_factcc_eval.py \
+  --input outputs/cnn_dailymail/validation_k5_candidates.jsonl
+```
+
+Outputs:
+- `outputs/<dataset>/summac_<split>_k5/summary_metrics.json`
+- `outputs/<dataset>/summac_<split>_k5/per_example_summac.jsonl`
+- `outputs/<dataset>/factcc_<split>_k5/summary_metrics.json`
+- `outputs/<dataset>/factcc_<split>_k5/per_example_factcc.jsonl`
+
 ## Project Structure
 
 ```text
@@ -68,4 +123,5 @@ src/fgr/metrics.py       # ROUGE + faithfulness metrics
 src/fgr/io.py            # JSONL utilities
 scripts/run_week1_generation.py
 scripts/run_week2_baseline_eval.py
+scripts/run_week3_reranking.py
 ```
