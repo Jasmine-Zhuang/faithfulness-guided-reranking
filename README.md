@@ -51,6 +51,13 @@ PYTHONPATH=src python3 scripts/run_week2_baseline_eval.py \
   --input outputs/cnn_dailymail/validation_k5_candidates.jsonl
 ```
 
+Or let the script resolve the candidate file from the dataset name:
+
+```bash
+PYTHONPATH=src python3 scripts/run_week2_baseline_eval.py \
+  --dataset cnn_dailymail
+```
+
 This computes:
 - ROUGE (`rouge1`, `rouge2`, `rougeL`, `rougeLsum`)
 - `nli_support`: sentence-level support score using `facebook/bart-large-mnli`
@@ -76,6 +83,13 @@ PYTHONPATH=src python3 scripts/run_week3_reranking.py \
   --input outputs/xsum/validation_k5_candidates.jsonl
 ```
 
+Dataset-driven resolution is also supported:
+
+```bash
+PYTHONPATH=src python3 scripts/run_week3_reranking.py \
+  --dataset xsum
+```
+
 This computes candidate-level faithfulness scores for each n-best list and compares:
 - `top1`
 - `single_metric_nli`
@@ -92,7 +106,7 @@ Output:
 - `outputs/<dataset>/week3_<split>_k5/strategy_metrics.json`
 - `outputs/<dataset>/week3_<split>_k5/run_config.json`
 
-### 5) Evaluate top-1 with SummaC or FactCC
+### 5) Evaluate top-1 with SummaC, FactCC, or QAGS-style QA consistency
 
 SummaC example:
 
@@ -108,11 +122,29 @@ PYTHONPATH=src python3 scripts/run_week2_factcc_eval.py \
   --input outputs/cnn_dailymail/validation_k5_candidates.jsonl
 ```
 
+QAGS-style example:
+
+```bash
+PYTHONPATH=src python3 scripts/run_week2_qags_eval.py \
+  --input outputs/cnn_dailymail/validation_k5_candidates.jsonl
+```
+
+All Week 2/3 scripts accept either:
+- `--input <path>`
+- or `--dataset <name>` plus optional `--split` / `--beam-size`
+
+When resolving from `--dataset`, scripts look for candidates in this order:
+- `outputs/<dataset>/<split>_k<beam>_candidates.jsonl`
+- `outputs/<dataset>_<split>_k<beam>_candidates.jsonl`
+- `outputs/<split>_k<beam>_candidates.jsonl`
+
 Outputs:
 - `outputs/<dataset>/summac_<split>_k5/summary_metrics.json`
 - `outputs/<dataset>/summac_<split>_k5/per_example_summac.jsonl`
 - `outputs/<dataset>/factcc_<split>_k5/summary_metrics.json`
 - `outputs/<dataset>/factcc_<split>_k5/per_example_factcc.jsonl`
+- `outputs/<dataset>/qags_<split>_k5/summary_metrics.json`
+- `outputs/<dataset>/qags_<split>_k5/per_example_qags.jsonl`
 
 ## Project Structure
 
@@ -123,5 +155,6 @@ src/fgr/metrics.py       # ROUGE + faithfulness metrics
 src/fgr/io.py            # JSONL utilities
 scripts/run_week1_generation.py
 scripts/run_week2_baseline_eval.py
+scripts/run_week2_qags_eval.py
 scripts/run_week3_reranking.py
 ```

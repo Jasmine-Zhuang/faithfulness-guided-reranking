@@ -10,7 +10,7 @@ import nltk
 import torch
 from tqdm.auto import tqdm
 
-from fgr.io import read_jsonl, write_jsonl
+from fgr.io import read_jsonl, resolve_candidate_jsonl, write_jsonl
 from fgr.metrics import compute_rouge
 from summac.model_summac import SummaCConv, SummaCZS
 
@@ -21,8 +21,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Evaluate baseline top-1 summaries with SummaC without modifying the Week 2 pipeline."
     )
-    parser.add_argument("--input", type=str, required=True, help="Path to *_candidates.jsonl")
+    parser.add_argument("--input", type=str, default=None, help="Path to *_candidates.jsonl")
+    parser.add_argument("--dataset", choices=["cnn_dailymail", "xsum"], default=None)
     parser.add_argument("--outdir", type=str, default="outputs")
+    parser.add_argument("--split", default="validation", help="Used with --dataset when --input is omitted.")
+    parser.add_argument("--beam-size", type=int, default=5, help="Used with --dataset when --input is omitted.")
     parser.add_argument("--model-type", choices=["conv", "zs"], default="conv")
     parser.add_argument("--model-name", type=str, default="vitc")
     parser.add_argument("--granularity", choices=["document", "paragraph", "sentence", "2sents"], default="sentence")
@@ -78,6 +81,46 @@ def build_summac_model(args: argparse.Namespace):
     )
 
 
+def patch_legacy_tokenizer_api(model) -> None:
+    imagers = getattr(model, "imagers", [])
+    for imager in imagers:
+        tokenizer = getattr(imager, "tokenizer", None)
+        if tokenizer is None or "batch_encode_plus" in getattr(tokenizer, "__dict__", {}):
+            continue
+
+        def batch_encode_plus(batch_text_or_text_pairs, **kwargs):
+            truncation_strategy = kwargs.pop("truncation_strategy", None)
+            if truncation_strategy == "only_first":
+                kwargs["truncation"] = "only_first"
+            return tokenizer(batch_text_or_text_pairs, **kwargs)
+
+        tokenizer.batch_encode_plus = batch_encode_plus
+
+
+def patch_summac_loaders(model) -> None:
+    imagers = getattr(model, "imagers", [])
+    for imager in imagers:
+        original_load_nli = getattr(imager, "load_nli", None)
+        if original_load_nli is None or getattr(imager, "_patched_load_nli", False):
+            continue
+
+        def load_nli_with_patch(*args, _original_load_nli=original_load_nli, _imager=imager, **kwargs):
+            result = _original_load_nli(*args, **kwargs)
+            tokenizer = getattr(_imager, "tokenizer", None)
+            if tokenizer is not None and "batch_encode_plus" not in getattr(tokenizer, "__dict__", {}):
+                def batch_encode_plus(batch_text_or_text_pairs, **tokenizer_kwargs):
+                    truncation_strategy = tokenizer_kwargs.pop("truncation_strategy", None)
+                    if truncation_strategy == "only_first":
+                        tokenizer_kwargs["truncation"] = "only_first"
+                    return tokenizer(batch_text_or_text_pairs, **tokenizer_kwargs)
+
+                tokenizer.batch_encode_plus = batch_encode_plus
+            return result
+
+        imager.load_nli = load_nli_with_patch
+        imager._patched_load_nli = True
+
+
 def chunked(seq: list[str], size: int):
     for i in range(0, len(seq), size):
         yield seq[i : i + size]
@@ -85,9 +128,16 @@ def chunked(seq: list[str], size: int):
 
 def main() -> None:
     args = parse_args()
-    rows = list(read_jsonl(args.input))
+    input_path = resolve_candidate_jsonl(
+        input_path=args.input,
+        dataset=args.dataset,
+        outdir=args.outdir,
+        split=args.split,
+        beam_size=args.beam_size,
+    )
+    rows = list(read_jsonl(input_path))
     if not rows:
-        raise ValueError(f"No rows found in {args.input}")
+        raise ValueError(f"No rows found in {input_path}")
 
     predictions = [r["top1"] for r in rows]
     references = [r["reference"] for r in rows]
@@ -96,6 +146,8 @@ def main() -> None:
     rouge_scores = compute_rouge(predictions, references)
     ensure_nltk_punkt()
     model = build_summac_model(args)
+    patch_summac_loaders(model)
+    patch_legacy_tokenizer_api(model)
 
     summac_scores: list[float] = []
     for source_batch, summary_batch in tqdm(
@@ -130,7 +182,6 @@ def main() -> None:
         },
     }
 
-    input_path = Path(args.input)
     dataset_name = rows[0].get("dataset", input_path.parent.name)
     stem = input_path.stem.replace("_candidates", "")
     run_dir = Path(args.outdir) / dataset_name / f"summac_{stem}"

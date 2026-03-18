@@ -9,7 +9,7 @@ import torch
 from tqdm.auto import tqdm
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-from fgr.io import read_jsonl, write_jsonl
+from fgr.io import read_jsonl, resolve_candidate_jsonl, write_jsonl
 from fgr.metrics import compute_rouge
 
 
@@ -17,8 +17,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Evaluate baseline top-1 summaries with FactCC without modifying the Week 2 pipeline."
     )
-    parser.add_argument("--input", type=str, required=True, help="Path to *_candidates.jsonl")
+    parser.add_argument("--input", type=str, default=None, help="Path to *_candidates.jsonl")
+    parser.add_argument("--dataset", choices=["cnn_dailymail", "xsum"], default=None)
     parser.add_argument("--outdir", type=str, default="outputs")
+    parser.add_argument("--split", default="validation", help="Used with --dataset when --input is omitted.")
+    parser.add_argument("--beam-size", type=int, default=5, help="Used with --dataset when --input is omitted.")
     parser.add_argument("--model-name", type=str, default="manueldeprada/FactCC")
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--max-length", type=int, default=512)
@@ -98,9 +101,16 @@ def score_factcc(
 
 def main() -> None:
     args = parse_args()
-    rows = list(read_jsonl(args.input))
+    input_path = resolve_candidate_jsonl(
+        input_path=args.input,
+        dataset=args.dataset,
+        outdir=args.outdir,
+        split=args.split,
+        beam_size=args.beam_size,
+    )
+    rows = list(read_jsonl(input_path))
     if not rows:
-        raise ValueError(f"No rows found in {args.input}")
+        raise ValueError(f"No rows found in {input_path}")
 
     predictions = [r["top1"] for r in rows]
     references = [r["reference"] for r in rows]
@@ -145,7 +155,6 @@ def main() -> None:
         },
     }
 
-    input_path = Path(args.input)
     dataset_name = rows[0].get("dataset", input_path.parent.name)
     stem = input_path.stem.replace("_candidates", "")
     run_dir = Path(args.outdir) / dataset_name / f"factcc_{stem}"
