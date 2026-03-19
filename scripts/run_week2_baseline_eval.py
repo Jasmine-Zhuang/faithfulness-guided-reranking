@@ -3,12 +3,8 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 
-from tqdm.auto import tqdm
-
-from fgr.io import read_jsonl, resolve_candidate_jsonl, write_jsonl
-from fgr.metrics import NLIConfig, NLIFaithfulnessScorer, compute_rouge, keyword_precision
+from fgr.baseline import BaselineEvalConfig, run_baseline_eval
 
 
 def parse_args() -> argparse.Namespace:
@@ -27,67 +23,21 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    input_path = resolve_candidate_jsonl(
-        input_path=args.input,
-        dataset=args.dataset,
-        outdir=args.outdir,
-        split=args.split,
-        beam_size=args.beam_size,
-    )
-    rows = list(read_jsonl(input_path))
-    if not rows:
-        raise ValueError(f"No rows found in {input_path}")
-
-    predictions = [r["top1"] for r in rows]
-    references = [r["reference"] for r in rows]
-
-    rouge_scores = compute_rouge(predictions, references)
-
-    nli = NLIFaithfulnessScorer(
-        cfg=NLIConfig(
-            model_name=args.nli_model,
-            batch_size=args.nli_batch_size,
-            max_source_sentences=args.nli_max_source_sentences,
-            max_summary_sentences=args.nli_max_summary_sentences,
+    result = run_baseline_eval(
+        BaselineEvalConfig(
+            input_path=args.input,
+            dataset=args.dataset,
+            outdir=args.outdir,
+            split=args.split,
+            beam_size=args.beam_size,
+            nli_model=args.nli_model,
+            nli_batch_size=args.nli_batch_size,
+            nli_max_source_sentences=args.nli_max_source_sentences,
+            nli_max_summary_sentences=args.nli_max_summary_sentences,
         )
     )
-
-    per_example = []
-    for r in tqdm(rows, desc="Scoring faithfulness"):
-        nli_score = nli.score(r["source"], r["top1"])
-        kw_score = keyword_precision(r["source"], r["top1"])
-        per_example.append(
-            {
-                "example_id": r["example_id"],
-                "nli_support": nli_score,
-                "keyword_precision": kw_score,
-            }
-        )
-
-    mean_nli = sum(x["nli_support"] for x in per_example) / len(per_example)
-    mean_kw = sum(x["keyword_precision"] for x in per_example) / len(per_example)
-
-    summary = {
-        "num_examples": len(rows),
-        "rouge": rouge_scores,
-        "faithfulness": {
-            "nli_support": mean_nli,
-            "keyword_precision": mean_kw,
-        },
-    }
-
-    dataset_name = rows[0].get("dataset", input_path.parent.name)
-    stem = input_path.stem.replace("_candidates", "")
-    run_dir = Path(args.outdir) / dataset_name / f"baseline_{stem}"
-    run_dir.mkdir(parents=True, exist_ok=True)
-
-    per_example_out = run_dir / "per_example_faithfulness.jsonl"
-    summary_out = run_dir / "summary_metrics.json"
-    write_jsonl(per_example_out, per_example)
-    summary_out.write_text(json.dumps(summary, indent=2), encoding="utf-8")
-
-    print(f"Saved summary: {summary_out}")
-    print(json.dumps(summary, indent=2))
+    print(f"Saved summary: {result['summary_out']}")
+    print(json.dumps(result["summary"], indent=2))
 
 
 if __name__ == "__main__":

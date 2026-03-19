@@ -2,11 +2,8 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 
-from fgr.data import load_split
-from fgr.generation import BartCandidateGenerator, GenerationConfig, resolve_model_name
-from fgr.io import write_jsonl
+from fgr.generation_pipeline import GenerationPipelineConfig, run_generation_pipeline
 
 
 def parse_args() -> argparse.Namespace:
@@ -27,43 +24,22 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    spec, ds = load_split(args.dataset, args.split)
-
-    n = min(args.num_examples, len(ds))
-    ds = ds.select(range(n))
-    sources = [row[spec.text_field] for row in ds]
-    references = [row[spec.summary_field] for row in ds]
-
-    cfg = GenerationConfig(
-        model_name=resolve_model_name(spec, args.model_name),
-        beam_size=args.beam_size,
-        batch_size=args.batch_size,
-        max_input_tokens=args.max_input_tokens,
-        max_new_tokens=args.max_new_tokens,
-        min_new_tokens=args.min_new_tokens,
-        length_penalty=args.length_penalty,
-    )
-
-    generator = BartCandidateGenerator(cfg)
-    candidates = generator.generate_candidates(sources)
-
-    rows = []
-    for i, (src, ref, cand_list) in enumerate(zip(sources, references, candidates, strict=True)):
-        rows.append(
-            {
-                "example_id": i,
-                "dataset": args.dataset,
-                "split": args.split,
-                "source": src,
-                "reference": ref,
-                "top1": cand_list[0],
-                "candidates": cand_list,
-            }
+    result = run_generation_pipeline(
+        GenerationPipelineConfig(
+            dataset=args.dataset,
+            split=args.split,
+            num_examples=args.num_examples,
+            beam_size=args.beam_size,
+            batch_size=args.batch_size,
+            max_input_tokens=args.max_input_tokens,
+            max_new_tokens=args.max_new_tokens,
+            min_new_tokens=args.min_new_tokens,
+            length_penalty=args.length_penalty,
+            model_name=args.model_name,
+            outdir=args.outdir,
         )
-
-    outpath = Path(args.outdir) / args.dataset / f"{args.split}_k{args.beam_size}_candidates.jsonl"
-    write_jsonl(outpath, rows)
-    print(f"Wrote {len(rows)} examples to: {outpath}")
+    )
+    print(f"Wrote {result['num_examples']} examples to: {result['output_path']}")
 
 
 if __name__ == "__main__":
