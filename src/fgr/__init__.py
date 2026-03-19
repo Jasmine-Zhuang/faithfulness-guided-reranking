@@ -10,5 +10,6 @@ __all__ = [
     "io",
     "qags",
     "qags_upstream",
+    "reranking",
     "summac",
 ]

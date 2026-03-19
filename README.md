@@ -216,6 +216,7 @@ src/fgr/io.py            # JSONL utilities
 src/fgr/generation_pipeline.py # Week 1 generation pipeline
 src/fgr/qags.py          # Local QAGS-style evaluation pipeline
 src/fgr/qags_upstream.py # Upstream QAGS staging/scoring wrapper
+src/fgr/reranking.py     # Week 3 reranking pipeline
 src/fgr/summac.py        # SummaC evaluation pipeline
 scripts/run_week1_generation.py
 scripts/run_week2_baseline_eval.py
