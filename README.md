@@ -116,7 +116,7 @@ Output:
 - `outputs/<dataset>/week3_<split>_k5/strategy_metrics.json`
 - `outputs/<dataset>/week3_<split>_k5/run_config.json`
 
-### 5) Evaluate top-1 with SummaC, FactCC, QAGS-style QA consistency, or upstream QAGS
+### 5) Evaluate top-1 with SummaC, FactCC, or QAGS-style QA consistency
 
 SummaC example:
 
@@ -143,17 +143,6 @@ This script is a local QAGS-style approximation. It uses Hugging Face question g
 - `outputs/<dataset>/qags_<split>_k5/summary_metrics.json`
 - `outputs/<dataset>/qags_<split>_k5/per_example_qags.jsonl`
 
-Upstream QAGS prep example:
-
-```bash
-PYTHONPATH=src python3 scripts/run_week2_qags_upstream.py prepare \
-  --dataset cnn_dailymail \
-  --qags-repo /path/to/qags
-```
-
-The upstream wrapper is separate from the local QAGS-style approximation. It stages inputs for the original `W4ngatang/qags` workflow and writes under:
-- `outputs/<dataset>/qags_upstream_<split>_k5/...`
-
 All Week 2/3 scripts accept either:
 - `--input <path>`
 - or `--dataset <name>` plus optional `--split` / `--beam-size`
@@ -170,39 +159,6 @@ Outputs:
 - `outputs/<dataset>/factcc_<split>_k5/per_example_factcc.jsonl`
 - `outputs/<dataset>/qags_<split>_k5/summary_metrics.json`
 - `outputs/<dataset>/qags_<split>_k5/per_example_qags.jsonl`
-- `outputs/<dataset>/qags_upstream_<split>_k5/...`
-
-See [docs/qags_upstream.md](/Users/jasminezhuang/faithfulness-guided-reranking/docs/qags_upstream.md) for the staged upstream workflow and dependencies.
-
-### 6) Run upstream QAGS on Kaggle
-
-If you want to run the upstream QAGS pipeline on Kaggle instead of configuring the environment locally, use:
-
-- [notebooks/qags_upstream_kaggle.ipynb](/Users/jasminezhuang/faithfulness-guided-reranking/notebooks/qags_upstream_kaggle.ipynb)
-
-What the notebook expects:
-- a Kaggle GPU notebook
-- this repo cloned from GitHub inside the notebook
-- a Kaggle dataset containing `validation_k5_candidates.jsonl` (or another `*_candidates.jsonl` file)
-- a Kaggle dataset containing the downloaded upstream QAGS checkpoint folder with:
-  - `qa/`
-  - `qg/`
-  - `dict.txt`
-
-The notebook auto-discovers:
-- `validation_k5_candidates.jsonl` under `/kaggle/input`
-- the QAGS checkpoint root directory by looking for a folder that contains `qa/`, `qg/`, and `dict.txt`
-
-It is configured for the upstream checkpoint file names:
-- `qg/qg_best.pt`
-- `qg/best_pretrained_bert.pt`
-
-Recommended Kaggle runtime:
-- GPU enabled
-- internet enabled if you want the notebook to clone GitHub repositories directly
-
-The notebook writes final upstream QAGS results to:
-- `outputs/<dataset>/qags_upstream_<split>_k5/results/summary_metrics.json`
 
 ## Project Structure
 
@@ -215,15 +171,12 @@ src/fgr/metrics.py       # ROUGE + faithfulness metrics
 src/fgr/io.py            # JSONL utilities
 src/fgr/generation_pipeline.py # Week 1 generation pipeline
 src/fgr/qags.py          # Local QAGS-style evaluation pipeline
-src/fgr/qags_upstream.py # Upstream QAGS staging/scoring wrapper
 src/fgr/reranking.py     # Week 3 reranking pipeline
 src/fgr/summac.py        # SummaC evaluation pipeline
 scripts/run_week1_generation.py
 scripts/run_week2_baseline_eval.py
 scripts/run_week2_factcc_eval.py
 scripts/run_week2_qags_eval.py
-scripts/run_week2_qags_upstream.py
 scripts/run_week2_summac_eval.py
 scripts/run_week3_reranking.py
-notebooks/qags_upstream_kaggle.ipynb
 ```
