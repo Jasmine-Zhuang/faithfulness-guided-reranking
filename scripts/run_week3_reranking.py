@@ -9,7 +9,7 @@ from fgr.reranking import Week3RerankingConfig, run_week3_reranking
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Week 3: Run single-metric and agreement-gated reranking using SummaC and FactCC."
+        description="Week 3: Run 3-metric single-metric, weighted-sum, and agreement-gated reranking."
     )
     parser.add_argument("--input", type=str, default=None, help="Path to *_candidates.jsonl from Week 1")
     parser.add_argument("--dataset", choices=["cnn_dailymail", "xsum"], default=None)
@@ -25,6 +25,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--weight-summac", type=float, default=1.0)
     parser.add_argument("--weight-factcc", type=float, default=1.0)
+    parser.add_argument("--weight-nli-support", type=float, default=1.0)
 
     parser.add_argument("--summac-model-type", choices=["conv", "zs"], default="conv")
     parser.add_argument("--summac-model-name", type=str, default="vitc")
@@ -35,6 +36,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--factcc-model-name", type=str, default="manueldeprada/FactCC")
     parser.add_argument("--factcc-batch-size", type=int, default=8)
     parser.add_argument("--factcc-max-length", type=int, default=512)
+    parser.add_argument("--nli-model-name", type=str, default="facebook/bart-large-mnli")
+    parser.add_argument("--nli-batch-size", type=int, default=32)
+    parser.add_argument("--nli-max-length", type=int, default=256)
+    parser.add_argument("--nli-max-source-sentences", type=int, default=20)
+    parser.add_argument("--nli-max-summary-sentences", type=int, default=5)
 
     parser.add_argument("--device", type=str, default=None, help="Override device, e.g. cpu or cuda")
     return parser.parse_args()
@@ -52,6 +58,7 @@ def main() -> None:
             fallback_strategy=args.fallback_strategy,
             weight_summac=args.weight_summac,
             weight_factcc=args.weight_factcc,
+            weight_nli_support=args.weight_nli_support,
             summac_model_type=args.summac_model_type,
             summac_model_name=args.summac_model_name,
             summac_granularity=args.summac_granularity,
@@ -60,6 +67,11 @@ def main() -> None:
             factcc_model_name=args.factcc_model_name,
             factcc_batch_size=args.factcc_batch_size,
             factcc_max_length=args.factcc_max_length,
+            nli_model_name=args.nli_model_name,
+            nli_batch_size=args.nli_batch_size,
+            nli_max_length=args.nli_max_length,
+            nli_max_source_sentences=args.nli_max_source_sentences,
+            nli_max_summary_sentences=args.nli_max_summary_sentences,
             device=args.device,
         )
     )

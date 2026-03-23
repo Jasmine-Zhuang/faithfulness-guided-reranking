@@ -45,12 +45,14 @@ class NLIConfig:
     max_length: int = 256
     max_source_sentences: int = 20
     max_summary_sentences: int = 5
+    device: str | None = None
 
 
 class NLIFaithfulnessScorer:
     def __init__(self, cfg: NLIConfig | None = None):
         self.cfg = cfg or NLIConfig()
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        resolved_device = self.cfg.device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device(resolved_device)
         self.tokenizer = AutoTokenizer.from_pretrained(self.cfg.model_name)
         self.model = AutoModelForSequenceClassification.from_pretrained(self.cfg.model_name).to(self.device)
         self.model.eval()

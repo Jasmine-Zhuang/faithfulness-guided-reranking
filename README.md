@@ -102,12 +102,14 @@ This computes candidate-level faithfulness scores for each n-best list and compa
 - `top1`
 - `single_metric_summac`
 - `single_metric_factcc`
-- `weighted_sum` (equal-weight z-score normalization over `summac` and `factcc` by default)
-- `agreement_gated` (selects a candidate only when at least two faithfulness metrics pick the same best candidate; otherwise falls back to `weighted_sum`)
+- `single_metric_nli_support`
+- `weighted_sum` (equal-weight z-score normalization over `summac`, `factcc`, and `nli_support` by default)
+- `agreement_gated` (selects a candidate when at least two of the three faithfulness metrics pick the same best candidate; otherwise falls back to `weighted_sum`)
 
 Optional flags:
 - `--fallback-strategy top1` to fall back to the original top-1 instead of `weighted_sum`
-- `--weight-summac` and `--weight-factcc` to change weighted-sum reranking weights
+- `--weight-summac`, `--weight-factcc`, and `--weight-nli-support` to change weighted-sum reranking weights
+- `--nli-model-name` and related `--nli-*` flags to tune the third reranking metric
 - `--num-examples 20` to run a small subset first
 - `--device cpu|cuda` to force inference onto a specific device
 

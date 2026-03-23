@@ -13,7 +13,7 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from .factcc import chunked, resolve_correct_label_id, resolve_device
 from .io import read_jsonl, resolve_candidate_jsonl, write_jsonl
-from .metrics import compute_rouge
+from .metrics import NLIConfig, NLIFaithfulnessScorer, compute_rouge
 from .summac import (
     SummaCConfig,
     build_summac_model,
@@ -26,10 +26,11 @@ STRATEGY_NAMES = [
     "top1",
     "single_metric_summac",
     "single_metric_factcc",
+    "single_metric_nli_support",
     "weighted_sum",
     "agreement_gated",
 ]
-METRIC_NAMES = ["summac", "factcc"]
+METRIC_NAMES = ["summac", "factcc", "nli_support"]
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,7 @@ class Week3RerankingConfig:
     fallback_strategy: str = "weighted_sum"
     weight_summac: float = 1.0
     weight_factcc: float = 1.0
+    weight_nli_support: float = 1.0
     summac_model_type: str = "conv"
     summac_model_name: str = "vitc"
     summac_granularity: str = "sentence"
@@ -51,6 +53,11 @@ class Week3RerankingConfig:
     factcc_model_name: str = "manueldeprada/FactCC"
     factcc_batch_size: int = 8
     factcc_max_length: int = 512
+    nli_model_name: str = "facebook/bart-large-mnli"
+    nli_batch_size: int = 32
+    nli_max_length: int = 256
+    nli_max_source_sentences: int = 20
+    nli_max_summary_sentences: int = 5
     device: str | None = None
 
 
@@ -125,6 +132,7 @@ def compute_candidate_scores(
     summac_model,
     factcc_model: AutoModelForSequenceClassification,
     factcc_tokenizer: AutoTokenizer,
+    nli_scorer: NLIFaithfulnessScorer,
 ) -> list[dict[str, float | int | str]]:
     if not candidates:
         raise ValueError("Each example must contain at least one candidate summary.")
@@ -139,6 +147,7 @@ def compute_candidate_scores(
         cfg.factcc_max_length,
         device,
     )
+    nli_scores = [float(nli_scorer.score(source, candidate)) for candidate in candidates]
 
     rows = []
     for idx, candidate in enumerate(candidates):
@@ -149,6 +158,7 @@ def compute_candidate_scores(
                 "summac": float(summac_scores[idx]),
                 "factcc": float(factcc_scores[idx]),
                 "factcc_label": factcc_labels[idx],
+                "nli_support": float(nli_scores[idx]),
             }
         )
 
@@ -161,6 +171,7 @@ def compute_candidate_scores(
         row["weighted_sum_score"] = (
             cfg.weight_summac * float(row["summac_z"])
             + cfg.weight_factcc * float(row["factcc_z"])
+            + cfg.weight_nli_support * float(row["nli_support_z"])
         )
 
     return rows
@@ -172,11 +183,16 @@ def select_strategies(
     fallback_strategy: str,
 ) -> dict[str, dict[str, int | float | str]]:
     top1_idx = 0
-    summac_idx = argmax([float(row["summac"]) for row in candidate_rows])
-    factcc_idx = argmax([float(row["factcc"]) for row in candidate_rows])
+    metric_votes = {
+        metric_name: argmax([float(row[metric_name]) for row in candidate_rows])
+        for metric_name in METRIC_NAMES
+    }
+    summac_idx = metric_votes["summac"]
+    factcc_idx = metric_votes["factcc"]
+    nli_idx = metric_votes["nli_support"]
     weighted_idx = argmax([float(row["weighted_sum_score"]) for row in candidate_rows])
 
-    votes = Counter([summac_idx, factcc_idx])
+    votes = Counter(metric_votes.values())
     agreed_idx, agreed_votes = votes.most_common(1)[0]
     use_gate = agreed_votes >= 2
 
@@ -201,6 +217,7 @@ def select_strategies(
         "top1": build_selection("top1", top1_idx),
         "single_metric_summac": build_selection("single_metric_summac", summac_idx),
         "single_metric_factcc": build_selection("single_metric_factcc", factcc_idx),
+        "single_metric_nli_support": build_selection("single_metric_nli_support", nli_idx),
         "weighted_sum": build_selection("weighted_sum", weighted_idx),
         "agreement_gated": build_selection(
             "agreement_gated",
@@ -210,10 +227,7 @@ def select_strategies(
                 "gate_reason": agreement_reason,
                 "agreed_candidate_idx": agreed_idx,
                 "agreement_votes": agreed_votes,
-                "metric_votes": {
-                    "summac": summac_idx,
-                    "factcc": factcc_idx,
-                },
+                "metric_votes": metric_votes,
             },
         ),
     }
@@ -318,6 +332,16 @@ def run_week3_reranking(cfg: Week3RerankingConfig) -> dict[str, Any]:
 
     factcc_tokenizer = AutoTokenizer.from_pretrained(cfg.factcc_model_name)
     factcc_model = AutoModelForSequenceClassification.from_pretrained(cfg.factcc_model_name).to(device)
+    nli_scorer = NLIFaithfulnessScorer(
+        cfg=NLIConfig(
+            model_name=cfg.nli_model_name,
+            batch_size=cfg.nli_batch_size,
+            max_length=cfg.nli_max_length,
+            max_source_sentences=cfg.nli_max_source_sentences,
+            max_summary_sentences=cfg.nli_max_summary_sentences,
+            device=device,
+        )
+    )
 
     reranked_rows = []
     for row in tqdm(rows, desc="Week 3 reranking"):
@@ -330,6 +354,7 @@ def run_week3_reranking(cfg: Week3RerankingConfig) -> dict[str, Any]:
             summac_model=summac_model,
             factcc_model=factcc_model,
             factcc_tokenizer=factcc_tokenizer,
+            nli_scorer=nli_scorer,
         )
         strategies = select_strategies(
             candidate_rows,
@@ -371,6 +396,7 @@ def run_week3_reranking(cfg: Week3RerankingConfig) -> dict[str, Any]:
                 "fallback_strategy": cfg.fallback_strategy,
                 "weight_summac": cfg.weight_summac,
                 "weight_factcc": cfg.weight_factcc,
+                "weight_nli_support": cfg.weight_nli_support,
                 "num_examples": len(rows),
                 "requested_num_examples": cfg.num_examples,
                 "strategy_names": STRATEGY_NAMES,
@@ -387,7 +413,14 @@ def run_week3_reranking(cfg: Week3RerankingConfig) -> dict[str, Any]:
                     "batch_size": cfg.factcc_batch_size,
                     "max_length": cfg.factcc_max_length,
                 },
-                "notes": "Week 3 reranking currently uses SummaC and FactCC only.",
+                "nli_config": {
+                    "model_name": cfg.nli_model_name,
+                    "batch_size": cfg.nli_batch_size,
+                    "max_length": cfg.nli_max_length,
+                    "max_source_sentences": cfg.nli_max_source_sentences,
+                    "max_summary_sentences": cfg.nli_max_summary_sentences,
+                },
+                "notes": "Week 3 reranking uses SummaC, FactCC, and NLI support for 3-metric reranking.",
             },
             indent=2,
         ),
