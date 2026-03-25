@@ -1,0 +1,19 @@
+{
+  "num_examples": 300,
+  "rouge": {
+    "rouge1": 0.3700725471829407,
+    "rouge2": 0.17179597902533617,
+    "rougeL": 0.2807750254535358,
+    "rougeLsum": 0.3216078152687709
+  },
+  "faithfulness": {
+    "summac": 0.7416734611491362
+  },
+  "summac_config": {
+    "model_type": "conv",
+    "model_name": "vitc",
+    "granularity": "sentence",
+    "batch_size": 8,
+    "device": "mps"
+  }
+}

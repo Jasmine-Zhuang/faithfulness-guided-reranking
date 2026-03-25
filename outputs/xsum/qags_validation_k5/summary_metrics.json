@@ -1,0 +1,23 @@
+{
+  "num_examples": 300,
+  "rouge": {
+    "rouge1": 0.46613829718575844,
+    "rouge2": 0.22967454334409199,
+    "rougeL": 0.3838800238051135,
+    "rougeLsum": 0.385211528155594
+  },
+  "faithfulness": {
+    "qags": 0.09493848251098898
+  },
+  "qags_config": {
+    "qg_model": "iarfmoose/t5-base-question-generator",
+    "qa_model": "deepset/roberta-base-squad2",
+    "num_questions": 3,
+    "max_answer_sentences": 5,
+    "qg_max_source_length": 384,
+    "qg_max_target_length": 64,
+    "qa_batch_size": 8,
+    "device": "cpu"
+  },
+  "notes": "This is a QAGS-style implementation using Hugging Face question generation and QA models, not the original QAGS codebase."
+}

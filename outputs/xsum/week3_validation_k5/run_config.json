@@ -1,0 +1,44 @@
+{
+  "input": "outputs/xsum/validation_k5_candidates.jsonl",
+  "resolved_input": "outputs/xsum/validation_k5_candidates.jsonl",
+  "device": "cuda",
+  "fallback_strategy": "weighted_sum",
+  "weight_summac": 1.0,
+  "weight_factcc": 1.0,
+  "weight_nli_support": 1.0,
+  "num_examples": 300,
+  "requested_num_examples": null,
+  "strategy_names": [
+    "top1",
+    "single_metric_summac",
+    "single_metric_factcc",
+    "single_metric_nli_support",
+    "weighted_sum",
+    "agreement_gated"
+  ],
+  "metric_names": [
+    "summac",
+    "factcc",
+    "nli_support"
+  ],
+  "summac_config": {
+    "model_type": "conv",
+    "model_name": "vitc",
+    "granularity": "sentence",
+    "batch_size": 8,
+    "cache_dir": ".cache/summac"
+  },
+  "factcc_config": {
+    "model_name": "manueldeprada/FactCC",
+    "batch_size": 8,
+    "max_length": 512
+  },
+  "nli_config": {
+    "model_name": "facebook/bart-large-mnli",
+    "batch_size": 32,
+    "max_length": 256,
+    "max_source_sentences": 20,
+    "max_summary_sentences": 5
+  },
+  "notes": "Week 3 reranking uses SummaC, FactCC, and NLI support for 3-metric reranking."
+}

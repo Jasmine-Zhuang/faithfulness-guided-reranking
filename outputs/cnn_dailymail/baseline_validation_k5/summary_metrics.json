@@ -1,0 +1,13 @@
+{
+  "num_examples": 300,
+  "rouge": {
+    "rouge1": 0.3710641101572898,
+    "rouge2": 0.1709866286511854,
+    "rougeL": 0.2812015057993541,
+    "rougeLsum": 0.32308844286779426
+  },
+  "faithfulness": {
+    "nli_support": 0.7579385263336977,
+    "keyword_precision": 0.9679355991050752
+  }
+}

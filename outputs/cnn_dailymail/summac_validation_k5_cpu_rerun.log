@@ -1,0 +1,33 @@
+<All keys matched successfully>
+Scoring SummaC:   0%|          | 0/38 [00:00<?, ?it/s]
+Loading weights:   0%|          | 0/27 [00:00<?, ?it/s][ALoading weights: 100%|██████████| 27/27 [00:00<00:00, 12266.70it/s]
+[1mAlbertForSequenceClassification LOAD REPORT[0m from: tals/albert-xlarge-vitaminc-mnli
+Key                            | Status     |  | 
+-------------------------------+------------+--+-
+albert.embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+/Users/jasminezhuang/faithfulness-guided-reranking/.venv/lib/python3.13/site-packages/summac/model_summac.py:298: UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow. Please consider converting the list to a single numpy.ndarray with numpy.array() before converting to a tensor. (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/torch/csrc/utils/tensor_new.cpp:256.)
+  histograms = torch.FloatTensor(histograms).to(self.device)
+Scoring SummaC:   3%|▎         | 1/38 [02:32<1:34:02, 152.51s/it]Scoring SummaC:   5%|▌         | 2/38 [03:51<1:05:43, 109.55s/it]Scoring SummaC:   8%|▊         | 3/38 [08:26<1:47:44, 184.71s/it]Scoring SummaC:  11%|█         | 4/38 [10:47<1:35:00, 167.65s/it]Scoring SummaC:  13%|█▎        | 5/38 [14:22<1:41:30, 184.55s/it]Scoring SummaC:  16%|█▌        | 6/38 [16:16<1:25:47, 160.85s/it]Scoring SummaC:  18%|█▊        | 7/38 [19:03<1:23:59, 162.57s/it]Scoring SummaC:  21%|██        | 8/38 [21:29<1:18:46, 157.56s/it]Scoring SummaC:  24%|██▎       | 9/38 [23:55<1:14:22, 153.87s/it]Scoring SummaC:  26%|██▋       | 10/38 [26:34<1:12:31, 155.40s/it]Scoring SummaC:  29%|██▉       | 11/38 [1:01:42<5:38:52, 753.05s/it]Scoring SummaC:  32%|███▏      | 12/38 [1:04:46<4:11:18, 579.94s/it]Scoring SummaC:  34%|███▍      | 13/38 [1:11:40<3:40:40, 529.62s/it]Scoring SummaC:  37%|███▋      | 14/38 [1:13:42<2:42:33, 406.41s/it]Scoring SummaC:  39%|███▉      | 15/38 [1:17:02<2:11:55, 344.14s/it]Scoring SummaC:  42%|████▏     | 16/38 [1:19:14<1:42:49, 280.41s/it]Scoring SummaC:  45%|████▍     | 17/38 [1:22:21<1:28:20, 252.40s/it]Scoring SummaC:  47%|████▋     | 18/38 [1:23:51<1:07:48, 203.42s/it]Scoring SummaC:  50%|█████     | 19/38 [1:25:58<57:10, 180.54s/it]  Scoring SummaC:  53%|█████▎    | 20/38 [1:27:16<44:54, 149.68s/it]Scoring SummaC:  55%|█████▌    | 21/38 [1:29:16<39:57, 141.00s/it]Scoring SummaC:  58%|█████▊    | 22/38 [1:31:25<36:37, 137.36s/it]Scoring SummaC:  61%|██████    | 23/38 [1:33:43<34:20, 137.33s/it]Scoring SummaC:  63%|██████▎   | 24/38 [1:36:37<34:38, 148.43s/it]Scoring SummaC:  66%|██████▌   | 25/38 [1:38:47<31:00, 143.09s/it]Scoring SummaC:  68%|██████▊   | 26/38 [1:41:25<29:28, 147.38s/it]Scoring SummaC:  71%|███████   | 27/38 [1:43:05<24:25, 133.22s/it]Scoring SummaC:  74%|███████▎  | 28/38 [1:45:28<22:40, 136.07s/it]Scoring SummaC:  76%|███████▋  | 29/38 [1:46:56<18:16, 121.86s/it]Scoring SummaC:  79%|███████▉  | 30/38 [1:49:14<16:51, 126.45s/it]Scoring SummaC:  82%|████████▏ | 31/38 [1:51:50<15:48, 135.52s/it]Scoring SummaC:  84%|████████▍ | 32/38 [1:54:13<13:46, 137.73s/it]Scoring SummaC:  87%|████████▋ | 33/38 [1:56:51<11:58, 143.69s/it]Scoring SummaC:  89%|████████▉ | 34/38 [1:59:12<09:31, 142.89s/it]Scoring SummaC:  92%|█████████▏| 35/38 [2:00:59<06:36, 132.08s/it]Scoring SummaC:  95%|█████████▍| 36/38 [2:03:26<04:33, 136.76s/it]Scoring SummaC:  97%|█████████▋| 37/38 [2:06:26<02:29, 149.54s/it]Scoring SummaC: 100%|██████████| 38/38 [2:07:44<00:00, 128.25s/it]Scoring SummaC: 100%|██████████| 38/38 [2:07:44<00:00, 201.71s/it]
+Saved summary: outputs/cnn_dailymail/summac_validation_k5/summary_metrics.json
+{
+  "num_examples": 300,
+  "rouge": {
+    "rouge1": 0.3708668196756343,
+    "rouge2": 0.17175674566318933,
+    "rougeL": 0.281442887785585,
+    "rougeLsum": 0.32256204629082985
+  },
+  "faithfulness": {
+    "summac": 0.2634135905404886
+  },
+  "summac_config": {
+    "model_type": "conv",
+    "model_name": "vitc",
+    "granularity": "sentence",
+    "batch_size": 8,
+    "device": "cpu"
+  }
+}

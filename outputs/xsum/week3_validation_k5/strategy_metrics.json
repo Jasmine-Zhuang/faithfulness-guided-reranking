@@ -1,0 +1,195 @@
+{
+  "top1": {
+    "num_examples": 300,
+    "rouge": {
+      "rouge1": 0.4657626943913431,
+      "rouge2": 0.22969192204310618,
+      "rougeL": 0.3843199504860485,
+      "rougeLsum": 0.3836385457255463
+    },
+    "faithfulness": {
+      "summac": 0.22470742493867873,
+      "factcc": 0.2219157674202385,
+      "nli_support": 0.08629414555898014
+    },
+    "selection": {
+      "changed_from_top1_rate": 0.0,
+      "mean_selected_candidate_idx": 0
+    },
+    "delta_vs_top1": {
+      "rouge": {
+        "rouge1": 0.0,
+        "rouge2": 0.0,
+        "rougeL": 0.0,
+        "rougeLsum": 0.0
+      },
+      "faithfulness": {
+        "summac": 0.0,
+        "factcc": 0.0,
+        "nli_support": 0.0
+      }
+    }
+  },
+  "single_metric_summac": {
+    "num_examples": 300,
+    "rouge": {
+      "rouge1": 0.4587536189666175,
+      "rouge2": 0.22554931521476704,
+      "rougeL": 0.3790887458954074,
+      "rougeLsum": 0.3789366738392535
+    },
+    "faithfulness": {
+      "summac": 0.22714804167548816,
+      "factcc": 0.22253841296331303,
+      "nli_support": 0.0851269053913226
+    },
+    "selection": {
+      "changed_from_top1_rate": 0.33666666666666667,
+      "mean_selected_candidate_idx": 0.7866666666666666
+    },
+    "delta_vs_top1": {
+      "rouge": {
+        "rouge1": -0.007009075424725619,
+        "rouge2": -0.00414260682833914,
+        "rougeL": -0.005231204590641081,
+        "rougeLsum": -0.0047018718862927855
+      },
+      "faithfulness": {
+        "summac": 0.0024406167368094256,
+        "factcc": 0.0006226455430745348,
+        "nli_support": -0.0011672401676575406
+      }
+    }
+  },
+  "single_metric_factcc": {
+    "num_examples": 300,
+    "rouge": {
+      "rouge1": 0.46102776303255266,
+      "rouge2": 0.22435442514915718,
+      "rougeL": 0.3793604577169005,
+      "rougeLsum": 0.37897302471881633
+    },
+    "faithfulness": {
+      "summac": 0.22438048948844275,
+      "factcc": 0.3406666150913194,
+      "nli_support": 0.08568829062423902
+    },
+    "selection": {
+      "changed_from_top1_rate": 0.7833333333333333,
+      "mean_selected_candidate_idx": 2.006666666666667
+    },
+    "delta_vs_top1": {
+      "rouge": {
+        "rouge1": -0.00473493135879044,
+        "rouge2": -0.005337496893948995,
+        "rougeL": -0.004959492769147977,
+        "rougeLsum": -0.004665521006729956
+      },
+      "faithfulness": {
+        "summac": -0.0003269354502359878,
+        "factcc": 0.1187508476710809,
+        "nli_support": -0.0006058549347411207
+      }
+    }
+  },
+  "single_metric_nli_support": {
+    "num_examples": 300,
+    "rouge": {
+      "rouge1": 0.46088925572676254,
+      "rouge2": 0.22929789927800734,
+      "rougeL": 0.38151298488635293,
+      "rougeLsum": 0.3816471460905572
+    },
+    "faithfulness": {
+      "summac": 0.2245164296030998,
+      "factcc": 0.2318646924248939,
+      "nli_support": 0.13243537410792972
+    },
+    "selection": {
+      "changed_from_top1_rate": 0.8233333333333334,
+      "mean_selected_candidate_idx": 2.0633333333333335
+    },
+    "delta_vs_top1": {
+      "rouge": {
+        "rouge1": -0.004873438664580565,
+        "rouge2": -0.00039402276509883927,
+        "rougeL": -0.0028069655996955656,
+        "rougeLsum": -0.001991399634989066
+      },
+      "faithfulness": {
+        "summac": -0.00019099533557892512,
+        "factcc": 0.009948925004655412,
+        "nli_support": 0.04614122854894957
+      }
+    }
+  },
+  "weighted_sum": {
+    "num_examples": 300,
+    "rouge": {
+      "rouge1": 0.46173470137263734,
+      "rouge2": 0.22987892194096782,
+      "rougeL": 0.38184959846097877,
+      "rougeLsum": 0.3821469026193879
+    },
+    "faithfulness": {
+      "summac": 0.2256715920070807,
+      "factcc": 0.2911640494631562,
+      "nli_support": 0.11612818101197869
+    },
+    "selection": {
+      "changed_from_top1_rate": 0.8033333333333333,
+      "mean_selected_candidate_idx": 2.0533333333333332
+    },
+    "delta_vs_top1": {
+      "rouge": {
+        "rouge1": -0.004027993018705767,
+        "rouge2": 0.0001869998978616394,
+        "rougeL": -0.002470352025069733,
+        "rougeLsum": -0.0014916431061584023
+      },
+      "faithfulness": {
+        "summac": 0.0009641670684019665,
+        "factcc": 0.06924828204291772,
+        "nli_support": 0.02983403545299855
+      }
+    }
+  },
+  "agreement_gated": {
+    "num_examples": 300,
+    "rouge": {
+      "rouge1": 0.4596519230240416,
+      "rouge2": 0.2270055239420787,
+      "rougeL": 0.380074176069503,
+      "rougeLsum": 0.3802261889341998
+    },
+    "faithfulness": {
+      "summac": 0.2255828182399273,
+      "factcc": 0.28725286312040527,
+      "nli_support": 0.11054177573057435
+    },
+    "agreement_gate": {
+      "pass_rate": 0.5966666666666667,
+      "gate_reason_counts": {
+        "metric_agreement": 179,
+        "fallback_weighted_sum": 121
+      }
+    },
+    "selection": {
+      "changed_from_top1_rate": 0.7,
+      "mean_selected_candidate_idx": 1.7533333333333334
+    },
+    "delta_vs_top1": {
+      "rouge": {
+        "rouge1": -0.006110771367301482,
+        "rouge2": -0.0026863981010274707,
+        "rougeL": -0.0042457744165455,
+        "rougeLsum": -0.0034123567913464936
+      },
+      "faithfulness": {
+        "summac": 0.000875393301248556,
+        "factcc": 0.06533709570016677,
+        "nli_support": 0.024247630171594203
+      }
+    }
+  }
+}

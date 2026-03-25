@@ -33,7 +33,6 @@ htmlcov/
 .idea/
 
 # Project outputs
-outputs/
 logs/
 
 # Model / dataset caches

@@ -1,0 +1,18 @@
+{
+  "num_examples": 300,
+  "rouge": {
+    "rouge1": 0.3702645996400739,
+    "rouge2": 0.17168726335742363,
+    "rougeL": 0.2809099176031649,
+    "rougeLsum": 0.3230539990681368
+  },
+  "faithfulness": {
+    "factcc": 0.4937449229781487
+  },
+  "factcc_config": {
+    "model_name": "manueldeprada/FactCC",
+    "batch_size": 8,
+    "max_length": 512,
+    "device": "cpu"
+  }
+}
