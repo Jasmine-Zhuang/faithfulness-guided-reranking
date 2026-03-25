@@ -98,6 +98,9 @@ PYTHONPATH=src python3 scripts/run_week3_reranking.py \
   --num-examples 20
 ```
 
+Kaggle notebook for the Week 3 reranking run:
+- https://www.kaggle.com/code/runxinzhuang/notebook3d9918e6d9
+
 This computes candidate-level faithfulness scores for each n-best list and compares:
 - `top1`
 - `single_metric_summac`
@@ -162,6 +165,26 @@ Outputs:
 - `outputs/<dataset>/qags_<split>_k5/summary_metrics.json`
 - `outputs/<dataset>/qags_<split>_k5/per_example_qags.jsonl`
 
+### 6) Aggregate Week 4/5 analysis artifacts
+
+After Week 3 reranking finishes, generate the comparison table and qualitative notes:
+
+```bash
+PYTHONPATH=src python3 scripts/run_week4_analysis.py
+```
+
+By default the script reads:
+- baseline summaries from `outputs/<dataset>/baseline_<split>_k5/summary_metrics.json`
+- reranking outputs from `kaggle_outputs/faithfulness-guided-reranking/outputs/<dataset>/week3_<split>_k5/`
+
+The corresponding Kaggle notebook for the Week 3 reranking outputs is:
+- https://www.kaggle.com/code/runxinzhuang/notebook3d9918e6d9
+
+It writes:
+- `outputs/week4_analysis/strategy_comparison.csv`
+- `outputs/week4_analysis/summary.md`
+- `outputs/week4_analysis/qualitative_examples.md`
+
 ## Project Structure
 
 ```text
@@ -181,4 +204,5 @@ scripts/run_week2_factcc_eval.py
 scripts/run_week2_qags_eval.py
 scripts/run_week2_summac_eval.py
 scripts/run_week3_reranking.py
+scripts/run_week4_analysis.py
 ```
