@@ -1,27 +1,43 @@
-# faithfulness-guided-reranking
-Faithfulness-guided reranking for abstractive summarization using transformer models and automatic factual consistency metrics.
+# Faithfulness-Guided Reranking
 
-## Week 1-2 Bootstrap
+This repository studies faithfulness-guided reranking for abstractive summarization. It generates `k` candidate summaries with BART, scores them with automatic factual consistency metrics, and compares reranking strategies against the original top-1 beam output.
 
-This repository now includes the initial experiment pipeline for:
-- Week 1 (Mar 3-7): setup + dataset loading + BART top-1 and n-best generation (`k=5`)
-- Week 2 (Mar 10-14): baseline scoring with ROUGE and faithfulness metrics
-- Week 3 (Mar 17-21): reranking with single-metric and agreement-gated selection
+The codebase was developed across course project milestones:
+- Week 1: candidate generation
+- Week 2: baseline evaluation and standalone faithfulness metrics
+- Week 3: reranking
+- Week 4-5: aggregate analysis and figures
 
-### 1) Install dependencies
+## Pipeline Overview
+
+The end-to-end workflow is:
+
+1. Generate `k` candidate summaries for `cnn_dailymail` or `xsum`.
+2. Evaluate the original top-1 summary with ROUGE and lightweight faithfulness signals.
+3. Score every candidate with SummaC, FactCC, and NLI support.
+4. Compare reranking strategies such as single-metric selection, weighted sum, and agreement gating.
+5. Aggregate quantitative and qualitative analysis artifacts.
+
+## Setup
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+export PYTHONPATH=src
 ```
 
-### 2) Generate top-1 and n-best summaries
+Optional:
+- `scripts/plot_week4_figures.py` also requires `matplotlib`.
 
-CNN/DailyMail example:
+## Quickstart
+
+### 1. Generate Candidate Summaries
+
+CNN/DailyMail:
 
 ```bash
-PYTHONPATH=src python3 scripts/run_week1_generation.py \
+python3 scripts/run_week1_generation.py \
   --dataset cnn_dailymail \
   --split validation \
   --num-examples 300 \
@@ -29,10 +45,10 @@ PYTHONPATH=src python3 scripts/run_week1_generation.py \
   --batch-size 4
 ```
 
-XSum example:
+XSum:
 
 ```bash
-PYTHONPATH=src python3 scripts/run_week1_generation.py \
+python3 scripts/run_week1_generation.py \
   --dataset xsum \
   --split validation \
   --num-examples 300 \
@@ -40,169 +56,192 @@ PYTHONPATH=src python3 scripts/run_week1_generation.py \
   --batch-size 4
 ```
 
-Output file format:
-- `outputs/<dataset>/<split>_k5_candidates.jsonl`
-- each row contains `source`, `reference`, `top1`, and full `candidates` list
+Output:
+- `outputs/<dataset>/<split>_k<beam-size>_candidates.jsonl`
 
-### 3) Evaluate Week 2 baseline (top-1)
+Each row contains:
+- `example_id`
+- `dataset`
+- `split`
+- `source`
+- `reference`
+- `top1`
+- `candidates`
+
+### 2. Evaluate the Top-1 Baseline
+
+Using an explicit candidate file:
 
 ```bash
-PYTHONPATH=src python3 scripts/run_week2_baseline_eval.py \
+python3 scripts/run_week2_baseline_eval.py \
   --input outputs/cnn_dailymail/validation_k5_candidates.jsonl
 ```
 
-Or let the script resolve the candidate file from the dataset name:
+Using dataset-based resolution:
 
 ```bash
-PYTHONPATH=src python3 scripts/run_week2_baseline_eval.py \
+python3 scripts/run_week2_baseline_eval.py \
   --dataset cnn_dailymail
 ```
 
 This computes:
-- ROUGE (`rouge1`, `rouge2`, `rougeL`, `rougeLsum`)
-- `nli_support`: sentence-level support score using `facebook/bart-large-mnli`
-- `keyword_precision`: lexical support proxy (summary content words supported by source)
+- ROUGE: `rouge1`, `rouge2`, `rougeL`, `rougeLsum`
+- `nli_support`: sentence-level support via `facebook/bart-large-mnli`
+- `keyword_precision`: lexical support proxy
 
-Output:
-- `outputs/<dataset>/baseline_<split>_k5/summary_metrics.json`
-- `outputs/<dataset>/baseline_<split>_k5/per_example_faithfulness.jsonl`
+Outputs:
+- `outputs/<dataset>/baseline_<split>_k<beam-size>/summary_metrics.json`
+- `outputs/<dataset>/baseline_<split>_k<beam-size>/per_example_faithfulness.jsonl`
 
-### 4) Run Week 3 reranking on the k-best list
+### 3. Run Reranking
 
-CNN/DailyMail example:
-
-```bash
-PYTHONPATH=src python3 scripts/run_week3_reranking.py \
-  --input outputs/cnn_dailymail/validation_k5_candidates.jsonl
-```
-
-XSum example:
+Using an explicit candidate file:
 
 ```bash
-PYTHONPATH=src python3 scripts/run_week3_reranking.py \
+python3 scripts/run_week3_reranking.py \
   --input outputs/xsum/validation_k5_candidates.jsonl
 ```
 
-Dataset-driven resolution is also supported:
+Using dataset-based resolution:
 
 ```bash
-PYTHONPATH=src python3 scripts/run_week3_reranking.py \
+python3 scripts/run_week3_reranking.py \
   --dataset xsum
 ```
 
-Small-scale smoke test example:
+Small smoke test:
 
 ```bash
-PYTHONPATH=src python3 scripts/run_week3_reranking.py \
+python3 scripts/run_week3_reranking.py \
   --dataset xsum \
   --num-examples 20
 ```
 
-Kaggle notebook for the Week 3 reranking run:
-- https://www.kaggle.com/code/runxinzhuang/notebook3d9918e6d9
-
-This computes candidate-level faithfulness scores for each n-best list and compares:
+Compared strategies:
 - `top1`
 - `single_metric_summac`
 - `single_metric_factcc`
 - `single_metric_nli_support`
-- `weighted_sum` (equal-weight z-score normalization over `summac`, `factcc`, and `nli_support` by default)
-- `agreement_gated` (selects a candidate when at least two of the three faithfulness metrics pick the same best candidate; otherwise falls back to `weighted_sum`)
+- `weighted_sum`
+- `agreement_gated`
 
-Optional flags:
-- `--fallback-strategy top1` to fall back to the original top-1 instead of `weighted_sum`
-- `--weight-summac`, `--weight-factcc`, and `--weight-nli-support` to change weighted-sum reranking weights
-- `--nli-model-name` and related `--nli-*` flags to tune the third reranking metric
-- `--num-examples 20` to run a small subset first
-- `--device cpu|cuda` to force inference onto a specific device
+`weighted_sum` uses equal-weight z-score normalization over `summac`, `factcc`, and `nli_support` by default.
 
-Output:
-- `outputs/<dataset>/week3_<split>_k5/reranked_examples.jsonl`
-- `outputs/<dataset>/week3_<split>_k5/strategy_metrics.json`
-- `outputs/<dataset>/week3_<split>_k5/run_config.json`
+`agreement_gated` selects the candidate chosen by at least two of the three faithfulness metrics. If no pair agrees, it falls back to `weighted_sum` by default.
 
-### 5) Evaluate top-1 with SummaC, FactCC, or QAGS-style QA consistency
-
-SummaC example:
-
-```bash
-PYTHONPATH=src python3 scripts/run_week2_summac_eval.py \
-  --input outputs/cnn_dailymail/validation_k5_candidates.jsonl
-```
-
-FactCC example:
-
-```bash
-PYTHONPATH=src python3 scripts/run_week2_factcc_eval.py \
-  --input outputs/cnn_dailymail/validation_k5_candidates.jsonl
-```
-
-QAGS-style example:
-
-```bash
-PYTHONPATH=src python3 scripts/run_week2_qags_eval.py \
-  --input outputs/cnn_dailymail/validation_k5_candidates.jsonl
-```
-
-This script is a local QAGS-style approximation. It uses Hugging Face question generation and QA models and writes to:
-- `outputs/<dataset>/qags_<split>_k5/summary_metrics.json`
-- `outputs/<dataset>/qags_<split>_k5/per_example_qags.jsonl`
-
-All Week 2/3 scripts accept either:
-- `--input <path>`
-- or `--dataset <name>` plus optional `--split` / `--beam-size`
-
-When resolving from `--dataset`, scripts look for candidates in this order:
-- `outputs/<dataset>/<split>_k<beam>_candidates.jsonl`
-- `outputs/<dataset>_<split>_k<beam>_candidates.jsonl`
-- `outputs/<split>_k<beam>_candidates.jsonl`
+Useful flags:
+- `--fallback-strategy top1`
+- `--weight-summac`, `--weight-factcc`, `--weight-nli-support`
+- `--nli-model-name` and related `--nli-*` flags
+- `--device cpu|cuda`
 
 Outputs:
-- `outputs/<dataset>/summac_<split>_k5/summary_metrics.json`
-- `outputs/<dataset>/summac_<split>_k5/per_example_summac.jsonl`
-- `outputs/<dataset>/factcc_<split>_k5/summary_metrics.json`
-- `outputs/<dataset>/factcc_<split>_k5/per_example_factcc.jsonl`
-- `outputs/<dataset>/qags_<split>_k5/summary_metrics.json`
-- `outputs/<dataset>/qags_<split>_k5/per_example_qags.jsonl`
+- `outputs/<dataset>/week3_<split>_k<beam-size>/reranked_examples.jsonl`
+- `outputs/<dataset>/week3_<split>_k<beam-size>/strategy_metrics.json`
+- `outputs/<dataset>/week3_<split>_k<beam-size>/run_config.json`
 
-### 6) Aggregate Week 4/5 analysis artifacts
+Kaggle notebook used for the Week 3 reranking run:
+- https://www.kaggle.com/code/runxinzhuang/657d-project-week3?scriptVersionId=305947620
 
-After Week 3 reranking finishes, generate the comparison table and qualitative notes:
+### 4. Run Standalone Faithfulness Metrics
+
+SummaC:
 
 ```bash
-PYTHONPATH=src python3 scripts/run_week4_analysis.py
+python3 scripts/run_week2_summac_eval.py \
+  --input outputs/cnn_dailymail/validation_k5_candidates.jsonl
 ```
 
-By default the script reads:
-- baseline summaries from `outputs/<dataset>/baseline_<split>_k5/summary_metrics.json`
-- reranking outputs from `kaggle_outputs/faithfulness-guided-reranking/outputs/<dataset>/week3_<split>_k5/`
+FactCC:
 
-The corresponding Kaggle notebook for the Week 3 reranking outputs is:
-- https://www.kaggle.com/code/runxinzhuang/notebook3d9918e6d9
+```bash
+python3 scripts/run_week2_factcc_eval.py \
+  --input outputs/cnn_dailymail/validation_k5_candidates.jsonl
+```
+
+QAGS-style QA consistency:
+
+```bash
+python3 scripts/run_week2_qags_eval.py \
+  --input outputs/cnn_dailymail/validation_k5_candidates.jsonl
+```
+
+Outputs:
+- `outputs/<dataset>/summac_<split>_k<beam-size>/summary_metrics.json`
+- `outputs/<dataset>/summac_<split>_k<beam-size>/per_example_summac.jsonl`
+- `outputs/<dataset>/factcc_<split>_k<beam-size>/summary_metrics.json`
+- `outputs/<dataset>/factcc_<split>_k<beam-size>/per_example_factcc.jsonl`
+- `outputs/<dataset>/qags_<split>_k<beam-size>/summary_metrics.json`
+- `outputs/<dataset>/qags_<split>_k<beam-size>/per_example_qags.jsonl`
+
+Note:
+- The QAGS script is a local approximation built from Hugging Face question generation and QA models.
+
+### 5. Aggregate Week 4-5 Analysis
+
+```bash
+python3 scripts/run_week4_analysis.py
+```
+
+By default, the script reads:
+- baseline summaries from `outputs/<dataset>/baseline_<split>_k<beam-size>/summary_metrics.json`
+- reranking outputs from `kaggle_outputs/faithfulness-guided-reranking/outputs/<dataset>/week3_<split>_k<beam-size>/`
 
 It writes:
 - `outputs/week4_analysis/strategy_comparison.csv`
 - `outputs/week4_analysis/summary.md`
 - `outputs/week4_analysis/qualitative_examples.md`
 
-## Project Structure
+### 6. Plot Comparison Figures
+
+```bash
+python3 scripts/plot_week4_figures.py
+```
+
+Outputs:
+- `outputs/week4_analysis/figures/figure1_metric_bars.png`
+- `outputs/week4_analysis/figures/figure2_tradeoff_scatter.png`
+- `outputs/week4_analysis/figures/figure3_gate_behavior.png`
+
+## Input Resolution Rules
+
+The Week 2 and Week 3 scripts accept either:
+- `--input <path>`
+- `--dataset <name>` with optional `--split` and `--beam-size`
+
+When resolving from `--dataset`, the scripts look for candidate files in this order:
+- `outputs/<dataset>/<split>_k<beam-size>_candidates.jsonl`
+- `outputs/<dataset>_<split>_k<beam-size>_candidates.jsonl`
+- `outputs/<split>_k<beam-size>_candidates.jsonl`
+
+## Repository Layout
 
 ```text
-src/fgr/baseline.py      # Baseline ROUGE + NLI/keyword evaluation pipeline
-src/fgr/data.py          # dataset specs + loading
-src/fgr/factcc.py        # FactCC evaluation pipeline
-src/fgr/generation.py    # BART generation for top-1 + n-best
-src/fgr/metrics.py       # ROUGE + faithfulness metrics
-src/fgr/io.py            # JSONL utilities
-src/fgr/generation_pipeline.py # Week 1 generation pipeline
-src/fgr/qags.py          # Local QAGS-style evaluation pipeline
-src/fgr/reranking.py     # Week 3 reranking pipeline
-src/fgr/summac.py        # SummaC evaluation pipeline
-scripts/run_week1_generation.py
-scripts/run_week2_baseline_eval.py
-scripts/run_week2_factcc_eval.py
-scripts/run_week2_qags_eval.py
-scripts/run_week2_summac_eval.py
-scripts/run_week3_reranking.py
-scripts/run_week4_analysis.py
+src/fgr/
+  baseline.py             Baseline ROUGE + NLI/keyword evaluation
+  data.py                 Dataset specs and loading
+  factcc.py               FactCC evaluation pipeline
+  generation.py           BART generation utilities
+  generation_pipeline.py  Candidate generation pipeline
+  io.py                   JSONL helpers and path resolution
+  metrics.py              ROUGE and faithfulness metrics
+  qags.py                 Local QAGS-style evaluation pipeline
+  reranking.py            Week 3 reranking pipeline
+  summac.py               SummaC evaluation pipeline
+
+scripts/
+  run_week1_generation.py
+  run_week2_baseline_eval.py
+  run_week2_factcc_eval.py
+  run_week2_qags_eval.py
+  run_week2_summac_eval.py
+  run_week3_reranking.py
+  run_week4_analysis.py
+  plot_week4_figures.py
+
+notebooks/
+  kaggle_week3_reranking.ipynb
+
+report/
+  final_report.tex
 ```
