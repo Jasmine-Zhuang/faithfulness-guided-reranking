@@ -25,7 +25,7 @@ def parse_args() -> argparse.Namespace:
         description="Week 4-5: aggregate reranking metrics and extract qualitative examples."
     )
     parser.add_argument("--baseline-root", type=str, default="outputs")
-    parser.add_argument("--week3-root", type=str, default="kaggle_outputs/faithfulness-guided-reranking/outputs")
+    parser.add_argument("--week3-root", type=str, default="outputs")
     parser.add_argument("--datasets", nargs="+", default=["xsum", "cnn_dailymail"])
     parser.add_argument("--split", default="validation")
     parser.add_argument("--beam-size", type=int, default=5)
@@ -40,11 +40,6 @@ def load_json(path: Path) -> dict:
 
 def load_strategy_metrics(week3_root: Path, dataset: str, split: str, beam_size: int) -> dict:
     path = week3_root / dataset / f"week3_{split}_k{beam_size}" / "strategy_metrics.json"
-    return load_json(path)
-
-
-def load_baseline_summary(baseline_root: Path, dataset: str, split: str, beam_size: int) -> dict:
-    path = baseline_root / dataset / f"baseline_{split}_k{beam_size}" / "summary_metrics.json"
     return load_json(path)
 
 
@@ -104,10 +99,13 @@ def choose_tradeoff_winner(metrics: dict) -> str:
     return max(
         candidates,
         key=lambda s: (
-            metrics[s]["delta_vs_top1"]["faithfulness"]["factcc"]
-            + metrics[s]["delta_vs_top1"]["faithfulness"]["nli_support"]
-            + 0.5 * metrics[s]["delta_vs_top1"]["faithfulness"]["summac"]
-            + 2.0 * metrics[s]["delta_vs_top1"]["rouge"]["rougeL"]
+            (
+                metrics[s]["delta_vs_top1"]["faithfulness"]["summac"]
+                + metrics[s]["delta_vs_top1"]["faithfulness"]["factcc"]
+                + metrics[s]["delta_vs_top1"]["faithfulness"]["nli_support"]
+            )
+            / 3.0,
+            metrics[s]["delta_vs_top1"]["rouge"]["rougeL"],
         ),
     )
 
@@ -118,9 +116,9 @@ def choose_examples(rows: list[dict], strategy_name: str, num_cases: int) -> tup
         top1 = row["strategies"]["top1"]
         chosen = row["strategies"][strategy_name]
         score = (
-            (chosen["factcc"] - top1["factcc"])
+            (chosen["summac"] - top1["summac"])
+            + (chosen["factcc"] - top1["factcc"])
             + (chosen["nli_support"] - top1["nli_support"])
-            + 0.5 * (chosen["summac"] - top1["summac"])
         )
         scored.append(
             {
@@ -153,18 +151,17 @@ def example_block(dataset: str, label: str, example: dict) -> str:
 
 
 def build_summary_markdown(
-    dataset_to_baseline: dict[str, dict],
     dataset_to_week3: dict[str, dict],
 ) -> str:
     lines = [
         "# Week 4 Analysis Summary",
         "",
-        "This file summarizes the quantitative comparison between baseline decoding and Week 3 reranking strategies.",
+        "This file summarizes the quantitative comparison between baseline decoding and Week 3 reranking strategies using the proposal metrics: ROUGE-L, SummaC, FactCC, and NLI support.",
         "",
     ]
 
-    for dataset, baseline in dataset_to_baseline.items():
-        metrics = dataset_to_week3[dataset]
+    for dataset, metrics in dataset_to_week3.items():
+        top1 = metrics["top1"]
         winner = choose_tradeoff_winner(metrics)
         agreement = metrics["agreement_gated"]
         weighted = metrics["weighted_sum"]
@@ -172,12 +169,11 @@ def build_summary_markdown(
             [
                 f"## {dataset}",
                 "",
-                f"- Baseline top-1 ROUGE-L: {fmt(baseline['rouge']['rougeL'])}",
-                f"- Baseline top-1 faithfulness proxies: NLI={fmt(baseline['faithfulness']['nli_support'])}, keyword_precision={fmt(baseline['faithfulness']['keyword_precision'])}",
+                f"- Baseline top-1 scores: ROUGE-L={fmt(top1['rouge']['rougeL'])}, SummaC={fmt(top1['faithfulness']['summac'])}, FactCC={fmt(top1['faithfulness']['factcc'])}, NLI={fmt(top1['faithfulness']['nli_support'])}",
                 f"- Best overall trade-off in this run: `{winner}`",
                 f"- `agreement_gated` changed the top-1 choice on {pct(agreement['selection']['changed_from_top1_rate'])} of examples and the gate passed on {pct(agreement['agreement_gate']['pass_rate'])} of examples.",
-                f"- `agreement_gated` vs top-1: delta ROUGE-L {fmt_delta(agreement['delta_vs_top1']['rouge']['rougeL'])}, delta FactCC {fmt_delta(agreement['delta_vs_top1']['faithfulness']['factcc'])}, delta NLI {fmt_delta(agreement['delta_vs_top1']['faithfulness']['nli_support'])}.",
-                f"- `weighted_sum` vs top-1: delta ROUGE-L {fmt_delta(weighted['delta_vs_top1']['rouge']['rougeL'])}, delta FactCC {fmt_delta(weighted['delta_vs_top1']['faithfulness']['factcc'])}, delta NLI {fmt_delta(weighted['delta_vs_top1']['faithfulness']['nli_support'])}.",
+                f"- `agreement_gated` vs top-1: delta ROUGE-L {fmt_delta(agreement['delta_vs_top1']['rouge']['rougeL'])}, delta SummaC {fmt_delta(agreement['delta_vs_top1']['faithfulness']['summac'])}, delta FactCC {fmt_delta(agreement['delta_vs_top1']['faithfulness']['factcc'])}, delta NLI {fmt_delta(agreement['delta_vs_top1']['faithfulness']['nli_support'])}.",
+                f"- `weighted_sum` vs top-1: delta ROUGE-L {fmt_delta(weighted['delta_vs_top1']['rouge']['rougeL'])}, delta SummaC {fmt_delta(weighted['delta_vs_top1']['faithfulness']['summac'])}, delta FactCC {fmt_delta(weighted['delta_vs_top1']['faithfulness']['factcc'])}, delta NLI {fmt_delta(weighted['delta_vs_top1']['faithfulness']['nli_support'])}.",
                 "",
             ]
         )
@@ -186,10 +182,10 @@ def build_summary_markdown(
         [
             "## Takeaways",
             "",
-            "- `xsum` shows the clearest benefit from reranking: faithfulness improves meaningfully while ROUGE-L drops by less than 0.5 absolute points.",
-            "- `cnn_dailymail` also improves on faithfulness metrics, but the gain is smaller relative to its already strong top-1 baseline.",
+            "- `xsum` shows the clearest benefit from reranking: FactCC and NLI improve meaningfully while ROUGE-L drops by less than 0.5 absolute points, though SummaC moves only slightly.",
+            "- `cnn_dailymail` also improves on all three faithfulness metrics, but the gain is smaller relative to its already strong top-1 baseline.",
             "- The agreement gate is conservative in spirit, but in this run it still changes many selections because metric agreement happens on more than half of examples.",
-            "- For the final report, `weighted_sum` is the strongest default comparator and `agreement_gated` is the main proposed method.",
+            "- For the final report, `weighted_sum` remains the strongest default comparator and `agreement_gated` is the main proposed method.",
             "",
         ]
     )
@@ -217,17 +213,14 @@ def build_qualitative_markdown(dataset_to_examples: dict[str, tuple[list[dict], 
 
 def main() -> None:
     args = parse_args()
-    baseline_root = Path(args.baseline_root)
     week3_root = Path(args.week3_root)
     outdir = Path(args.outdir)
 
-    dataset_to_baseline: dict[str, dict] = {}
     dataset_to_week3: dict[str, dict] = {}
     strategy_rows: list[dict] = []
     dataset_to_examples: dict[str, tuple[list[dict], list[dict]]] = {}
 
     for dataset in args.datasets:
-        dataset_to_baseline[dataset] = load_baseline_summary(baseline_root, dataset, args.split, args.beam_size)
         dataset_to_week3[dataset] = load_strategy_metrics(week3_root, dataset, args.split, args.beam_size)
         strategy_rows.extend(summarize_strategy_rows(dataset, dataset_to_week3[dataset]))
         reranked_rows = load_reranked_rows(week3_root, dataset, args.split, args.beam_size)
@@ -236,7 +229,7 @@ def main() -> None:
     csv_path = outdir / "strategy_comparison.csv"
     write_csv(csv_path, strategy_rows, list(strategy_rows[0].keys()))
 
-    summary_md = build_summary_markdown(dataset_to_baseline, dataset_to_week3)
+    summary_md = build_summary_markdown(dataset_to_week3)
     summary_path = outdir / "summary.md"
     ensure_parent_dir(summary_path)
     summary_path.write_text(summary_md, encoding="utf-8")

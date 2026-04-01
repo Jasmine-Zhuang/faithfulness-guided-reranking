@@ -184,8 +184,13 @@ python3 scripts/run_week4_analysis.py
 ```
 
 By default, the script reads:
-- baseline summaries from `outputs/<dataset>/baseline_<split>_k<beam-size>/summary_metrics.json`
-- reranking outputs from `kaggle_outputs/faithfulness-guided-reranking/outputs/<dataset>/week3_<split>_k<beam-size>/`
+- reranking outputs from `outputs/<dataset>/week3_<split>_k<beam-size>/`
+
+The generated summary uses the proposal-aligned metric set from Week 3 reranking outputs:
+- `ROUGE-L`
+- `SummaC`
+- `FactCC`
+- `NLI support`
 
 It writes:
 - `outputs/week4_analysis/strategy_comparison.csv`
@@ -202,6 +207,10 @@ Outputs:
 - `outputs/week4_analysis/figures/figure1_metric_bars.png`
 - `outputs/week4_analysis/figures/figure2_tradeoff_scatter.png`
 - `outputs/week4_analysis/figures/figure3_gate_behavior.png`
+
+Figure details:
+- `figure1_metric_bars.png` compares `ROUGE-L`, `SummaC`, `FactCC`, and `NLI support` for the main comparison strategies.
+- `figure2_tradeoff_scatter.png` plots ROUGE-L change against the mean faithfulness change across `SummaC`, `FactCC`, and `NLI support`.
 
 ## Input Resolution Rules
 
